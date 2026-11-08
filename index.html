@@ -44,25 +44,31 @@
   .week span:first-child{color:var(--red)}
   .board{position:relative}
   .grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
-  .cell{min-height:calc(var(--cw)*1.6 + 24px);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  .cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);
     padding:4px 1px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   .cell:nth-child(7n){border-right:none}
   .cell.out .num{opacity:.35}
   .head{width:100%;display:flex;flex-direction:column;align-items:center;flex-shrink:0}
-  .slot{width:100%;height:calc(var(--cw)*.62);margin-top:auto;display:flex;justify-content:center;align-items:flex-end;flex-shrink:0}
+  .slot{width:calc(var(--cw)*.62);height:calc(var(--cw)*.62);margin-top:4px;flex-shrink:0}   /* 사진 자리 (모든 칸 같은 높이) */
   .num{font-size:15px;font-weight:500;line-height:24px;min-width:24px;height:24px;text-align:center;border-radius:12px}
   .cell.sun .num,.cell.hol .num{color:var(--red)}
   .cell.today .num{background:var(--text);color:#fff !important;font-weight:700}
   .hname{font-size:10px;color:var(--red)}
-  /* 첫번째 사진과 같은 ⭐ (아이폰 기본 이모지) */
-  .starE{display:block;height:24px;line-height:24px;font-size:calc(var(--cw)*.44);text-align:center;overflow:visible;
-    font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+  /* 무지출 별 = 로고 별 */
+  .starE{display:block;width:24px;height:24px;overflow:visible}
+  .starE svg{width:calc(var(--cw)*.42);height:calc(var(--cw)*.42);display:block;margin:calc((24px - var(--cw)*.42)/2) auto 0}
+  .ist.tight{margin:0 1px 0 2px}
+  .ist{width:1.05em;height:1.05em;vertical-align:-.17em;margin-right:3px}
   .chip{width:100%;border-radius:4px;color:#fff;font-size:11px;font-weight:700;padding:3px 2px 3px 3px;letter-spacing:-.4px;
     white-space:nowrap;overflow:hidden;text-overflow:clip;line-height:1.2;font-variant-numeric:tabular-nums}
+  .chips{width:100%;height:41px;margin-top:5px;display:flex;flex-direction:column;align-items:center;gap:3px;overflow:hidden;flex-shrink:0}   /* 금액은 최대 2줄 → 모든 칸 높이가 같음 */
   .chip.zero{background:var(--c-zero);color:var(--t-zero)}
   .chip,.chip.zero,.cat.on{color:#16181D !important}
-  .more{font-size:10px;color:var(--sub);font-weight:600}
+  .more{font-size:11px;color:var(--sub);font-weight:700;line-height:19px}
+  .stk .badge{position:absolute;top:-5px;right:-6px;background:rgba(22,24,29,.75);color:#fff;font-size:10px;font-weight:700;border-radius:999px;padding:1px 5px;border:1.5px solid #fff;pointer-events:none}
+  .angle{position:absolute;z-index:6;display:none;transform:translate(-50%,-100%);background:#16181D;color:#fff;font-size:12px;font-weight:700;border-radius:8px;padding:3px 8px;pointer-events:none;white-space:nowrap}
+  .angle.zero{background:#E5322D}
   /* 자유 배치 사진 */
   .stickers{position:absolute;inset:0;pointer-events:none;overflow:hidden}
   .stk{position:absolute;pointer-events:auto;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
@@ -76,6 +82,8 @@
   .stk.sel .h{display:block}
   .h.del{left:-15px;top:-15px}
   .h.rs{right:-15px;bottom:-15px;cursor:nwse-resize}
+  .h.rot{left:50%;top:-40px;margin-left:-12px;cursor:grab}
+  .stk.sel .h.rot::before{content:"";position:absolute;left:50%;top:22px;width:1.5px;height:16px;background:#222;margin-left:-.75px}
   .h::after{content:"";position:absolute;inset:-10px}  /* 손가락으로 잡기 쉽게 터치 영역 확대 */
   .gv,.gh{position:absolute;background:#E5322D;display:none;pointer-events:none;z-index:5}
   .gv{width:1px;top:0;bottom:0}.gh{height:1px;left:0;right:0}
@@ -227,14 +235,14 @@
   </div>
   <div class="summary" id="summary" role="button" tabindex="0">
     <div><div class="label">이번 달 지출 <span class="go">›</span></div><div class="val" id="sum">0원</div></div>
-    <div class="zero" id="zeroCnt">⭐ 무지출 0일</div>
+    <div class="zero" id="zeroCnt">무지출 0일</div>
   </div>
   <div class="week"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
   <div class="board" id="board">
     <div class="grid" id="grid"></div>
     <div class="ghl" id="ghl"></div>
     <div class="stickers" id="stickers"></div>
-    <div class="gv" id="gv"></div><div class="gh" id="gh"></div>
+    <div class="gv" id="gv"></div><div class="gh" id="gh"></div><div class="angle" id="angle"></div>
   </div>
 </div>
 
@@ -283,6 +291,7 @@ let uid=1;
 const fitW=(ar,box=.62)=>ar>=1?box:box*ar;           // 기본 크기: 칸 너비의 62% 상자 안에 맞춤
 const mk=(key,ph,o={})=>({id:uid++,dbid:null,path:null,key,src:ph.src,ar:ph.ar,ox:.5,oy:null,w:fitW(ph.ar),rot:0,...o});
 let photos=[];   // 달력에 붙인 사진들 (처음엔 비어 있음)
+const STAR_SVG=(cls='ist')=>`<svg class="${cls}" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 L62.5 35.5 L94 38.5 L70 59.5 L77.5 91 L50 74.5 L22.5 91 L30 59.5 L6 38.5 L37.5 35.5 Z" fill="#FFD43B" stroke="#F0A30A" stroke-width="5" stroke-linejoin="round"/></svg>`;   // 로고와 같은 별
 const won=n=>n.toLocaleString('ko-KR')+'원';
 const dayTotal=d=>d.entries.reduce((s,x)=>s+x.a,0);
 const isZero=d=>d && d.entries.length>0 && dayTotal(d)===0;
@@ -291,7 +300,7 @@ const photosOf=k=>photos.filter(p=>p.key===k);
 /* ---------- 달력 ---------- */
 function render(){
   const {y,m}=cur;
-  $('title').textContent=editing?`${m+1}월 꾸미기`:`${y}년 ${m+1}월`;
+  $('title').textContent=`${y}년 ${m+1}월`;
   const first=new Date(y,m,1).getDay(), last=new Date(y,m+1,0).getDate();
   const start=new Date(y,m,1-first); const weeks=Math.ceil((first+last)/7);
   const grid=$('grid'); grid.innerHTML='';
@@ -307,42 +316,56 @@ function render(){
     if(HOL[k]) c.classList.add('hol');
     if(k===keyOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate())) c.classList.add('today');
     if(d&&inMonth){ sum+=dayTotal(d); if(isZero(d)) zc++; }
-    const head=isZero(d)?`<span class="starE">⭐</span>`:`<div class="num">${dt.getDate()}</div>${HOL[k]?`<div class="hname">${HOL[k]}</div>`:''}`;
+    const head=isZero(d)?`<span class="starE">${STAR_SVG('')}</span>`:`<div class="num">${dt.getDate()}</div>${HOL[k]?`<div class="hname">${HOL[k]}</div>`:''}`;
     let chips='';
     if(d){
       if(isZero(d)) chips=`<div class="chip zero">0원</div>`;
       else{
         const list=d.entries.filter(x=>x.a>0);
-        list.slice(0,3).forEach(x=>chips+=`<div class="chip" style="background:${CATS[x.c]};color:${FG[x.c]}">${x.a}원</div>`);   // 달력 칸에는 금액만 (메모는 날짜를 누르면 보임)
-        if(list.length>3) chips+=`<div class="more">+${list.length-3}</div>`;
+        const chip=x=>`<div class="chip" style="background:${CATS[x.c]};color:${FG[x.c]}">${x.a}원</div>`;   // 달력 칸에는 금액만 (메모는 날짜를 누르면 보임)
+        if(list.length<=2) list.forEach(x=>chips+=chip(x));
+        else chips=chip(list[0])+`<div class="more">+${list.length-1}건</div>`;
       }
     }
-    c.innerHTML=`<div class="head">${head}</div>${chips}<div class="slot"></div>`;
+    c.innerHTML=`<div class="head">${head}</div><div class="chips">${chips}</div><div class="slot"></div>`;
     grid.appendChild(c);
   }
   $('sum').textContent=won(sum);
-  $('zeroCnt').textContent=`⭐ 무지출 ${zc}일`;
+  $('zeroCnt').innerHTML=`${STAR_SVG()}무지출 ${zc}일`;
   renderStickers();
 }
 const cellEl=k=>$('grid').querySelector(`[data-key="${k}"]`);
-// 기본 위치: 사진 밑변이 칸 맨 아래(여백 6px)에 오도록. 옮기기 전까지는 칸 높이가 바뀌어도 계속 맨 밑에 붙어 있음
-const defOy=(c,h)=>(c.offsetHeight-6-h/2)/c.offsetWidth;
+// 사진 두 종류
+//  - 기본 사진(oy가 없음): 칸의 사진 자리에 같은 크기 정사각형으로. 보기 모드에선 하루 1장 + "+N" 배지
+//  - 자유 사진(oy가 있음): 꾸미기에서 옮기거나 크기·각도를 바꾼 사진. 놓은 그대로 보임
+const isFree=p=>p.oy!=null;
+const slotOf=c=>c.querySelector('.slot');
+const defOyOf=c=>{ const s=slotOf(c); return (s.offsetTop-c.offsetTop+s.offsetHeight/2)/c.offsetWidth; };
 
 /* ---------- 사진 그리기 ---------- */
 function renderStickers(){
   const layer=$('stickers'); layer.innerHTML='';
+  const groups={}; photos.forEach(p=>{ if(!isFree(p)) (groups[p.key]=groups[p.key]||[]).push(p); });
   photos.forEach(p=>{
     const c=cellEl(p.key); if(!c) return;
-    const cw=c.offsetWidth;
+    let idx=0, extra=0;
+    if(!isFree(p)){ const g=groups[p.key]; idx=g.indexOf(p); extra=g.length-1; if(!editing&&idx>0) return; }
     const el=document.createElement('div'); el.className='stk'+(editing&&p.id===selId?' sel':''); el.dataset.id=p.id;
-    el.innerHTML=`<div class="img" style="background-image:url(${p.src})"></div><span class="h del" data-h="del">✕</span><span class="h rs" data-h="rs">⤡</span>`;
-    layer.appendChild(el); place(el,p);
+    el.innerHTML=`<div class="img" style="background-image:url(${p.src})"></div>`+
+      (!editing&&!isFree(p)&&extra>0?`<span class="badge">+${extra}</span>`:'')+
+      `<span class="h del" data-h="del">✕</span><span class="h rot" data-h="rot" aria-label="회전">↻</span><span class="h rs" data-h="rs" aria-label="크기">⤡</span>`;
+    layer.appendChild(el); place(el,p,idx);
   });
 }
-function geom(p){ const c=cellEl(p.key), cw=c.offsetWidth;
-  const w=p.w*cw, h=w/p.ar, oy=p.oy??defOy(c,h); return {cx:c.offsetLeft+p.ox*cw, cy:c.offsetTop+oy*cw, w, h, cw}; }
-function place(el,p){ const g=geom(p);
-  Object.assign(el.style,{left:(g.cx-g.w/2)+'px',top:(g.cy-g.h/2)+'px',width:g.w+'px',height:g.h+'px',transform:`rotate(${p.rot}deg)`}); }
+function geom(p,idx=0){ const c=cellEl(p.key), cw=c.offsetWidth;
+  if(!isFree(p)){ const s=slotOf(c), z=s.offsetHeight;   // 기본 사진: 사진 자리 정사각형 (꾸미기 중엔 여러 장을 살짝 겹쳐 보여줌)
+    return {cx:s.offsetLeft+s.offsetWidth/2+idx*7, cy:s.offsetTop+z/2-idx*5, w:z, h:z, cw, rot:idx*6}; }
+  const w=p.w*cw, h=w/p.ar; return {cx:c.offsetLeft+p.ox*cw, cy:c.offsetTop+p.oy*cw, w, h, cw, rot:p.rot}; }
+function place(el,p,idx=0){ const g=geom(p,idx);
+  Object.assign(el.style,{left:(g.cx-g.w/2)+'px',top:(g.cy-g.h/2)+'px',width:g.w+'px',height:g.h+'px',transform:`rotate(${g.rot}deg)`}); }
+// 기본 사진을 처음 움직이는 순간 자유 사진으로 바꿈 (지금 보이는 자리·크기에서 시작)
+function freeIt(p){ const g=geom(p), c=cellEl(p.key), cw=c.offsetWidth;
+  const w=p.ar>=1?g.w/cw:g.w/cw*p.ar; Object.assign(p,{ox:(g.cx-c.offsetLeft)/cw, oy:(g.cy-c.offsetTop)/cw, w, rot:0}); }
 
 /* 사진 중심이 들어간 칸으로 기준 날짜를 다시 잡음 */
 function reanchor(p,cx,cy){
@@ -406,31 +429,44 @@ $('stickers').addEventListener('pointerdown',ev=>{
   if(selId!==p.id){ selId=p.id; renderStickers(); }
   const node=$('stickers').querySelector(`[data-id="${p.id}"]`);
   node.setPointerCapture(ev.pointerId);
-  const g=geom(p); const br=$('board').getBoundingClientRect();
-  const px=ev.clientX-br.left, py=ev.clientY-br.top;
-  drag={p,node,mode:h==='rs'?'rs':'mv',g0:g,px,py,
-    d0:Math.hypot(px-g.cx,py-g.cy), a0:Math.atan2(py-g.cy,px-g.cx), w0:p.w, r0:p.rot, cx:g.cx, cy:g.cy};
+  const br=$('board').getBoundingClientRect();
+  drag={p,node,mode:h==='rs'?'rs':h==='rot'?'rot':'mv',px:ev.clientX-br.left,py:ev.clientY-br.top,started:false};
 });
+function startDrag(){   // 실제로 움직이기 시작할 때 준비 (그냥 탭만 하면 아무것도 안 바뀜)
+  const {p}=drag; if(!isFree(p)){ freeIt(p); place(drag.node,p); }
+  const g=geom(p); Object.assign(drag,{g0:g,cx:g.cx,cy:g.cy,w0:p.w,r0:p.rot,
+    d0:Math.max(10,Math.hypot(drag.px-g.cx,drag.py-g.cy)), a0:Math.atan2(drag.py-g.cy,drag.px-g.cx), started:true});
+}
 $('stickers').addEventListener('pointermove',ev=>{
   if(!drag) return;
   const br=$('board').getBoundingClientRect(); const px=ev.clientX-br.left, py=ev.clientY-br.top;
+  if(!drag.started){ if(Math.hypot(px-drag.px,py-drag.py)<4) return; startDrag(); }
   const {p,g0}=drag;
   if(drag.mode==='mv'){
     let cx=g0.cx+(px-drag.px), cy=g0.cy+(py-drag.py);
     const s=snap(cx,cy); cx=s.x; cy=s.y; drag.cx=cx; drag.cy=cy;
     const w=p.w*g0.cw, h=w/p.ar;
     Object.assign(drag.node.style,{left:(cx-w/2)+'px',top:(cy-h/2)+'px'});
-  }else{
-    const sc=Math.hypot(px-g0.cx,py-g0.cy)/drag.d0;
-    p.w=Math.min(5,Math.max(.25,drag.w0*sc));
+  }else if(drag.mode==='rs'){   // 크기만 바뀜 (돌아가지 않음)
+    p.w=Math.min(5,Math.max(.25,drag.w0*Math.hypot(px-g0.cx,py-g0.cy)/drag.d0)); place(drag.node,p);
+  }else{                        // 회전: 0°·90° 근처는 착 붙고, 15° 단위로 살짝 걸림
     let r=drag.r0+(Math.atan2(py-g0.cy,px-g0.cx)-drag.a0)*180/Math.PI;
-    r=((r+540)%360)-180; if(Math.abs(r)<4) r=0;   // 0도 근처면 똑바로 맞춰줌
+    r=((r+540)%360)-180;
+    const n90=Math.round(r/90)*90, n15=Math.round(r/15)*15;
+    if(Math.abs(r-n90)<8) r=n90; else if(Math.abs(r-n15)<3) r=n15;
+    if(r===-180) r=180;
+    if(r!==p.rot&&r%90===0){ try{navigator.vibrate&&navigator.vibrate(8)}catch(_){} }
     p.rot=r; place(drag.node,p);
+    const a=$('angle'); a.style.display='block'; a.textContent=r===0?'수평 0°':`${Math.round(r)}°`; a.classList.toggle('zero',r%90===0);
+    a.style.left=g0.cx+'px'; a.style.top=(g0.cy-geom(p).h/2-48)+'px';
+    const gh=$('gh'); gh.style.display=r%90===0?'block':'none'; gh.style.top=g0.cy+'px';
   }
 });
 const endDrag=()=>{ if(!drag) return;
-  if(drag.mode==='mv') reanchor(drag.p,drag.cx,drag.cy);
-  const moved=drag.p; drag=null; hideGuides(); renderStickers(); remote.savePhoto(moved); };
+  const d=drag; drag=null; $('angle').style.display='none'; hideGuides();
+  if(!d.started) return;
+  if(d.mode==='mv') reanchor(d.p,d.cx,d.cy);
+  renderStickers(); remote.savePhoto(d.p); };
 $('stickers').addEventListener('pointerup',endDrag);
 $('stickers').addEventListener('pointercancel',endDrag);
 
@@ -440,7 +476,7 @@ function snap(x,y){
   let sx=null, sy=null, cellX=null, cellY=null;
   for(const c of cells.slice(0,7)){ const v=c.offsetLeft+c.offsetWidth/2; if(Math.abs(x-v)<T){sx=v;cellX=c;break;} }
   for(let i=0;i<cells.length;i+=7){ const c=cells[i], cw=c.offsetWidth;
-    for(const v of [c.offsetTop+defOy(c,cw*.62)*cw, c.offsetTop+c.offsetHeight/2]) if(Math.abs(y-v)<T){sy=v;cellY=c;} }
+    for(const v of [c.offsetTop+defOyOf(c)*cw, c.offsetTop+c.offsetHeight/2]) if(Math.abs(y-v)<T){sy=v;cellY=c;} }
   const gv=$('gv'),gh=$('gh'),hl=$('ghl');
   gv.style.display=sx!=null?'block':'none'; if(sx!=null) gv.style.left=sx+'px';
   gh.style.display=sy!=null?'block':'none'; if(sy!=null) gh.style.top=sy+'px';
@@ -508,7 +544,7 @@ dim.addEventListener('click',closeSheet);
 function drawSheet(){
   const k=openKey; const d=days[k]||{entries:[]}; const ps=photosOf(k); const [y,m,dd]=k.split('-').map(Number);
   const wd='일월화수목금토'[new Date(y,m-1,dd).getDay()];
-  const tot=d.entries.length?(isZero(d)?'⭐ 무지출 데이':won(dayTotal(d))):'아직 기록이 없어요';
+  const tot=d.entries.length?(isZero(d)?STAR_SVG()+'무지출 데이':won(dayTotal(d))):'아직 기록이 없어요';
   const body=$('sheetBody');
   body.innerHTML=`
     <h2>${m}월 ${dd}일 (${wd})</h2><div class="total">${tot}</div>
@@ -521,8 +557,8 @@ function drawSheet(){
       :'<div class="empty">지출을 추가하거나, 안 썼으면 ‘무지출’을 눌러요</div>'}
     <div class="form"><input class="amt" id="amt" inputmode="numeric" placeholder="금액"><input id="memo" placeholder="메모 (예: 국밥)"></div>
     <div class="cats">${Object.keys(CATS).map(c=>`<button class="cat ${c===selCat?'on':''}" data-cat="${c}" style="${c===selCat?'background:'+CATS[c]+';color:'+FG[c]:''}">${c}</button>`).join('')}</div>
-    <div class="btns"><button class="btn zero" id="zbtn">⭐ 무지출</button><button class="btn main" id="add">추가</button></div>
-    <div class="tip">0원만 기록된 날은 날짜 자리에 자동으로 ⭐이 떠요.</div>`;
+    <div class="btns"><button class="btn zero" id="zbtn">${STAR_SVG()}무지출</button><button class="btn main" id="add">추가</button></div>
+    <div class="tip">0원만 기록된 날은 날짜 자리에 자동으로 ${STAR_SVG('ist tight')}이 떠요.</div>`;
   const amt=body.querySelector('#amt');
   amt.addEventListener('input',()=>{const v=amt.value.replace(/[^0-9]/g,'');amt.value=v?(+v).toLocaleString('ko-KR'):'';});
   body.querySelector('#addp').onclick=()=>{ addTarget=k; $('file').click(); };
