@@ -277,11 +277,11 @@ let selCat='식비', openKey=null, editing=false, selId=null;
 
 /* ---------- 데이터 ----------
    entries: 날짜별 지출 / photos: 사진마다 '어느 날짜 칸 기준으로 어디에, 얼마나 크게, 몇 도' 있는지 저장 */
-const e=(a,m,c)=>({a,m,c});
+const e=(a,m,c,id=null)=>({a,m,c,id});   // id = 서버(Supabase)에 저장된 행 번호
 const days={};   // 날짜별 지출 기록 (처음엔 비어 있음)
 let uid=1;
 const fitW=(ar,box=.62)=>ar>=1?box:box*ar;           // 기본 크기: 칸 너비의 62% 상자 안에 맞춤
-const mk=(key,ph,o={})=>({id:uid++,key,src:ph.src,ar:ph.ar,ox:.5,oy:null,w:fitW(ph.ar),rot:0,...o});
+const mk=(key,ph,o={})=>({id:uid++,dbid:null,path:null,key,src:ph.src,ar:ph.ar,ox:.5,oy:null,w:fitW(ph.ar),rot:0,...o});
 let photos=[];   // 달력에 붙인 사진들 (처음엔 비어 있음)
 const won=n=>n.toLocaleString('ko-KR')+'원';
 const dayTotal=d=>d.entries.reduce((s,x)=>s+x.a,0);
@@ -402,7 +402,7 @@ $('stickers').addEventListener('pointerdown',ev=>{
   const el=ev.target.closest('.stk'); if(!el) return;
   ev.preventDefault();
   const p=photos.find(x=>x.id==el.dataset.id); const h=ev.target.dataset.h;
-  if(h==='del'){ photos=photos.filter(x=>x!==p); selId=null; renderStickers(); return; }
+  if(h==='del'){ photos=photos.filter(x=>x!==p); selId=null; renderStickers(); remote.delPhoto(p); return; }
   if(selId!==p.id){ selId=p.id; renderStickers(); }
   const node=$('stickers').querySelector(`[data-id="${p.id}"]`);
   node.setPointerCapture(ev.pointerId);
@@ -430,7 +430,7 @@ $('stickers').addEventListener('pointermove',ev=>{
 });
 const endDrag=()=>{ if(!drag) return;
   if(drag.mode==='mv') reanchor(drag.p,drag.cx,drag.cy);
-  drag=null; hideGuides(); renderStickers(); };
+  const moved=drag.p; drag=null; hideGuides(); renderStickers(); remote.savePhoto(moved); };
 $('stickers').addEventListener('pointerup',endDrag);
 $('stickers').addEventListener('pointercancel',endDrag);
 
@@ -496,7 +496,7 @@ $('cOk').onclick=()=>{
   const cv=document.createElement('canvas'); cv.width=Math.round(sw*r); cv.height=Math.round(sh*r);
   cv.getContext('2d').drawImage(img,crop.x*k,crop.y*k,sw,sh,0,0,cv.width,cv.height);
   const ph={src:cv.toDataURL('image/jpeg',.85),ar:sw/sh}; closeCrop();
-  const p=mk(addTarget,ph); photos.push(p);
+  const p=mk(addTarget,ph); photos.push(p); remote.addPhoto(p);
   closeSheet(); setEditing(true,p.id); toast('끌어서 옮기고, ⤡로 크기·회전, 완료!');
 };
 
@@ -527,13 +527,15 @@ function drawSheet(){
   amt.addEventListener('input',()=>{const v=amt.value.replace(/[^0-9]/g,'');amt.value=v?(+v).toLocaleString('ko-KR'):'';});
   body.querySelector('#addp').onclick=()=>{ addTarget=k; $('file').click(); };
   body.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{selCat=b.dataset.cat;drawSheet();});
-  body.querySelectorAll('[data-delp]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();photos=photos.filter(p=>p.id!=b.dataset.delp);drawSheet();render();});
-  body.querySelectorAll('[data-dele]').forEach(b=>b.onclick=()=>{ensure(k).entries.splice(+b.dataset.dele,1);clean(k);drawSheet();render();});
+  body.querySelectorAll('[data-delp]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();const p=photos.find(x=>x.id==b.dataset.delp);photos=photos.filter(x=>x!==p);drawSheet();render();remote.delPhoto(p);});
+  body.querySelectorAll('[data-dele]').forEach(b=>b.onclick=()=>{const [x]=ensure(k).entries.splice(+b.dataset.dele,1);clean(k);drawSheet();render();remote.delEntry(x);});
   body.querySelector('#add').onclick=()=>{
     if(!amt.value){amt.focus();return;}
-    ensure(k).entries.push(e(+amt.value.replace(/[^0-9]/g,''),body.querySelector('#memo').value.trim(),selCat)); drawSheet(); render();
+    const x=e(+amt.value.replace(/[^0-9]/g,''),body.querySelector('#memo').value.trim(),selCat);
+    ensure(k).entries.push(x); drawSheet(); render(); remote.addEntry(k,x);
   };
-  body.querySelector('#zbtn').onclick=()=>{ const x=ensure(k); x.entries=x.entries.filter(v=>v.a!==0); x.entries.push(e(0,'','기타')); drawSheet(); render(); };
+  body.querySelector('#zbtn').onclick=async()=>{ const x=ensure(k); x.entries=x.entries.filter(v=>v.a!==0); const z=e(0,'','기타'); x.entries.push(z); drawSheet(); render();
+    await remote.delZero(k); remote.addEntry(k,z); };
 }
 
 /* ---------- 설정: 카테고리 관리 · 배경화면 ---------- */
@@ -560,12 +562,12 @@ function drawSettings(view){
       <div class="btns"><button class="btn main" id="addCat">추가</button></div>`;
     $('back').onclick=()=>{palFor=null;drawSettings('main');};
     body.querySelectorAll('[data-sw]').forEach(b=>b.onclick=()=>{palFor=palFor===b.dataset.sw?null:b.dataset.sw;drawSettings('cat');});
-    body.querySelectorAll('[data-pc]').forEach(b=>b.onclick=()=>{CATS[palFor]=b.dataset.pc;palFor=null;drawSettings('cat');render();});
+    body.querySelectorAll('[data-pc]').forEach(b=>b.onclick=()=>{CATS[palFor]=b.dataset.pc;palFor=null;drawSettings('cat');render();remote.saveSettings();});
     body.querySelectorAll('[data-name]').forEach(inp=>inp.onchange=()=>renameCat(inp.dataset.name,inp.value.trim()));
     body.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>askDelete(b.dataset.rm));
     $('addCat').onclick=()=>{ const n=$('newCat').value.trim(); if(!n) return $('newCat').focus();
       if(CATS[n]) return toast('이미 있는 이름이에요');
-      const used=Object.values(CATS); CATS[n]=PALETTE.find(p=>!used.includes(p))||PALETTE[0]; drawSettings('cat'); };
+      const used=Object.values(CATS); CATS[n]=PALETTE.find(p=>!used.includes(p))||PALETTE[0]; drawSettings('cat'); remote.saveSettings(); };
     return;
   }
   if(view==='bg'){
@@ -573,7 +575,7 @@ function drawSettings(view){
       <div class="bgs">${BGS.map((b,i)=>`<button data-bg="${i}" class="${bgState.i===i?'on':''}" style="background:${b.css}">${b.name}</button>`).join('')}
       <button id="bgPhoto" class="${bgState.i===-1?'on':''}" style="${bgState.photo?`background-image:url(${bgState.photo})`:'background:#fff'}">${bgState.photo?'내 사진':'＋ 내 사진'}</button></div>`;
     $('back').onclick=()=>drawSettings('main');
-    body.querySelectorAll('[data-bg]').forEach(b=>b.onclick=()=>{bgState.i=+b.dataset.bg;applyBg();drawSettings('bg');});
+    body.querySelectorAll('[data-bg]').forEach(b=>b.onclick=()=>{bgState.i=+b.dataset.bg;applyBg();drawSettings('bg');remote.saveSettings();});
     $('bgPhoto').onclick=()=>$('bgfile').click();
   }
 }
@@ -584,6 +586,7 @@ function renameCat(from,to){
   Object.keys(CATS).forEach(k=>delete CATS[k]); Object.assign(CATS,next);
   Object.values(days).forEach(d=>d.entries.forEach(x=>{if(x.c===from)x.c=to;}));
   if(selCat===from) selCat=to; render(); drawSettings('cat');
+  remote.renameCat(from,to);
 }
 function askDelete(c){
   if(Object.keys(CATS).length<=1) return toast('카테고리는 하나 이상 있어야 해요');
@@ -595,6 +598,7 @@ function askDelete(c){
     Object.keys(days).forEach(k=>{ days[k].entries=days[k].entries.filter(x=>x.c!==c); clean(k); });
     delete CATS[c]; if(selCat===c) selCat=Object.keys(CATS)[0];
     $('modal').classList.remove('on'); render(); drawSettings('cat'); toast(`${c} 삭제됨`);
+    remote.deleteCat(c);
   };
 }
 $('mno').onclick=()=>$('modal').classList.remove('on');
@@ -609,7 +613,7 @@ const BGS=[
   {name:'민트',css:'linear-gradient(180deg,#E8FBF5,#BFEDE0)'},
   {name:'핑크',css:'linear-gradient(180deg,#FFF0F5,#F9CFDC)'},
 ];
-const bgState={i:0,photo:null};
+const bgState={i:0,photo:null,path:null};   // path = 서버에 올린 배경 사진 위치
 function applyBg(){
   const b=document.body;
   if(bgState.i===-1&&bgState.photo){ b.style.background=`linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.55)),url(${bgState.photo}) center/cover fixed`; }
@@ -621,7 +625,7 @@ $('bgfile').addEventListener('change',async ev=>{
   const url=URL.createObjectURL(f); const img=new Image();
   img.onload=()=>{ const r=Math.min(1,1600/Math.max(img.width,img.height)); const cv=document.createElement('canvas');
     cv.width=img.width*r; cv.height=img.height*r; cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-    bgState.photo=cv.toDataURL('image/jpeg',.85); bgState.i=-1; URL.revokeObjectURL(url); applyBg(); drawSettings('bg'); };
+    bgState.photo=cv.toDataURL('image/jpeg',.85); bgState.i=-1; URL.revokeObjectURL(url); applyBg(); drawSettings('bg'); remote.saveBgPhoto(bgState.photo); };
   img.src=url;
 });
 $('gear').onclick=openSettings;
@@ -684,6 +688,64 @@ $('prev').onclick=()=>{cur.m--; if(cur.m<0){cur.m=11;cur.y--;} render();};
 $('next').onclick=()=>{cur.m++; if(cur.m>11){cur.m=0;cur.y++;} render();};
 $('today').onclick=()=>{cur={y:TODAY.getFullYear(),m:TODAY.getMonth()}; render();};
 addEventListener('resize',render);
+/* ---------- 서버 저장 (Supabase) ----------
+   - 왜: 새로고침하거나 폰을 바꿔도 기록이 남게
+   - 어디: 지출 → entries 표, 사진 정보 → photos 표 + 사진 파일 → photos 저장소, 카테고리·배경 → settings 표
+   - 안전: 모든 표에 "내 user_id인 행만" 보고 쓸 수 있는 규칙(RLS)이 걸려 있음 (schema.sql)
+   - 문제 생기는 경우: 인터넷이 끊기면 저장 실패 알림이 뜸 → 그 기록은 새로고침하면 사라짐 */
+const remote={
+  on(){ return !!(sb&&me); },
+  async run(q,what='저장'){ if(!this.on()) return null;
+    const {data,error}=await q; if(error){ console.error(error); toast(`${what} 실패: ${error.message}`); return null; } return data; },
+  async loadAll(){
+    if(!this.on()) return;
+    const [st,en,ph]=await Promise.all([
+      this.run(sb.from('settings').select('*').maybeSingle(),'불러오기'),
+      this.run(sb.from('entries').select('*').order('day').order('created_at'),'불러오기'),
+      this.run(sb.from('photos').select('*').order('created_at'),'불러오기')]);
+    if(st&&Array.isArray(st.categories)&&st.categories.length){
+      Object.keys(CATS).forEach(k=>delete CATS[k]); st.categories.forEach(c=>CATS[c.name]=c.color);
+      if(!CATS[selCat]) selCat=Object.keys(CATS)[0];
+    }
+    if(st&&st.bg){ bgState.i=st.bg.i??0; bgState.path=st.bg.path||null;
+      if(bgState.path){ const u=await this.run(sb.storage.from('photos').createSignedUrl(bgState.path,60*60*24*7),'배경 불러오기'); bgState.photo=u?u.signedUrl:null; if(!bgState.photo&&bgState.i===-1) bgState.i=0; }
+      applyBg(); }
+    Object.keys(days).forEach(k=>delete days[k]);
+    (en||[]).forEach(r=>ensure(r.day).entries.push(e(r.amount,r.memo||'',r.category,r.id)));
+    photos=[];
+    if(ph&&ph.length){
+      const urls=await this.run(sb.storage.from('photos').createSignedUrls(ph.map(r=>r.path),60*60*24*7),'사진 불러오기')||[];
+      ph.forEach((r,i)=>{ const u=urls[i]&&urls[i].signedUrl; if(!u) return;
+        photos.push({id:uid++,dbid:r.id,path:r.path,key:r.day,src:u,ar:r.ar,ox:r.ox,oy:r.oy,w:r.w,rot:r.rot||0}); });
+    }
+    render();
+  },
+  async addEntry(day,x){ if(!this.on()) return; const d=await this.run(sb.from('entries').insert({day,amount:x.a,memo:x.m,category:x.c}).select('id').single());
+    if(d) x.id=d.id; },
+  async delEntry(x){ if(!this.on()) return; if(x&&x.id) await this.run(sb.from('entries').delete().eq('id',x.id),'삭제'); },
+  async delZero(day){ if(!this.on()) return; await this.run(sb.from('entries').delete().eq('day',day).eq('amount',0),'삭제'); },
+  async renameCat(from,to){ if(!this.on()) return; await this.run(sb.from('entries').update({category:to}).eq('category',from)); await this.saveSettings(); },
+  async deleteCat(c){ if(!this.on()) return; await this.run(sb.from('entries').delete().eq('category',c),'삭제'); await this.saveSettings(); },
+  async saveSettings(){ if(!this.on()) return;
+    await this.run(sb.from('settings').upsert({user_id:me.id,categories:Object.entries(CATS).map(([name,color])=>({name,color})),
+      bg:{i:bgState.i,path:bgState.path||null},updated_at:new Date().toISOString()})); },
+  async upload(dataUrl,prefix=''){
+    const blob=await (await fetch(dataUrl)).blob(); const path=`${me.id}/${prefix}${crypto.randomUUID()}.jpg`;
+    const ok=await this.run(sb.storage.from('photos').upload(path,blob,{contentType:'image/jpeg'}),'사진 올리기');
+    return ok?path:null; },
+  async addPhoto(p){ if(!this.on()) return;
+    const path=await this.upload(p.src); if(!path) return; p.path=path;
+    const d=await this.run(sb.from('photos').insert({day:p.key,path,ar:p.ar,ox:p.ox,oy:p.oy,w:p.w,rot:p.rot}).select('id').single());
+    if(d){ p.dbid=d.id; if(!photos.includes(p)) return this.delPhoto(p); this.savePhoto(p); } },
+  async savePhoto(p){ if(!this.on()) return; if(p&&p.dbid) await this.run(sb.from('photos').update({day:p.key,ox:p.ox,oy:p.oy,w:p.w,rot:p.rot}).eq('id',p.dbid)); },
+  async delPhoto(p){ if(!p||!this.on()) return;
+    if(p.dbid) await this.run(sb.from('photos').delete().eq('id',p.dbid),'삭제');
+    if(p.path) await this.run(sb.storage.from('photos').remove([p.path]),'삭제'); },
+  async saveBgPhoto(dataUrl){ if(!this.on()) return;
+    const old=bgState.path; const path=await this.upload(dataUrl,'bg-'); if(!path) return;
+    bgState.path=path; await this.saveSettings(); if(old) this.run(sb.storage.from('photos').remove([old]),'삭제'); },
+};
+
 /* ---------- 로그인 (Supabase + 구글) ----------
    - 왜: 내 가계부를 나만 보고, 나중에 어느 기기에서든 같은 데이터를 보려고
    - 저장 위치: 로그인 정보(세션)는 이 폰 브라우저에 저장, 계정 자체는 Supabase에 저장
@@ -705,8 +767,8 @@ $('gLogin').onclick=async()=>{
   if(!window.supabase){ $('lErr').textContent='로그인 모듈을 불러오지 못했어요. 새로고침해 주세요.'; return; }
   sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
   const {data:{session}}=await sb.auth.getSession();
-  me=session?session.user:null; showLogin(!me);
-  sb.auth.onAuthStateChange((_e,s)=>{ me=s?s.user:null; showLogin(!me); });
+  me=session?session.user:null; showLogin(!me); if(me) remote.loadAll();
+  sb.auth.onAuthStateChange((_e,s)=>{ const was=me&&me.id; me=s?s.user:null; showLogin(!me); if(me&&me.id!==was) remote.loadAll(); });
 })();
 
 render();
