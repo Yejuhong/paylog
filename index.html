@@ -44,8 +44,8 @@
   .week span:first-child{color:var(--red)}
   .board{position:relative}
   .grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
-  .cell{min-height:calc(var(--cw)*2.45 + 27px);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
-    padding:4px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
+  .cell{min-height:calc(var(--cw)*1.6 + 24px);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+    padding:4px 1px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   .cell:nth-child(7n){border-right:none}
   .cell.out .num{opacity:.35}
@@ -58,8 +58,8 @@
   /* 첫번째 사진과 같은 ⭐ (아이폰 기본 이모지) */
   .starE{display:block;height:24px;line-height:24px;font-size:calc(var(--cw)*.44);text-align:center;overflow:visible;
     font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
-  .chip{width:calc(100% - 2px);border-radius:5px;color:#fff;font-size:10.5px;font-weight:700;padding:3px 4px;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+  .chip{width:100%;border-radius:4px;color:#fff;font-size:11px;font-weight:700;padding:3px 2px 3px 3px;letter-spacing:-.4px;
+    white-space:nowrap;overflow:hidden;text-overflow:clip;line-height:1.2;font-variant-numeric:tabular-nums}
   .chip.zero{background:var(--c-zero);color:var(--t-zero)}
   .chip,.chip.zero,.cat.on{color:#16181D !important}
   .more{font-size:10px;color:var(--sub);font-weight:600}
@@ -82,7 +82,7 @@
   .ghl{position:absolute;border:1.5px dashed #E5326A;background:rgba(229,50,106,.08);display:none;pointer-events:none;z-index:1}
   .editbar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);display:none;gap:10px;z-index:20}
   body.editing .editbar{display:flex}
-  .editbar button{border:none;background:#fff;border-radius:999px;padding:13px 22px;font-size:15px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.12);cursor:pointer;font-family:inherit;color:var(--text)}
+  .editbar button{display:flex;align-items:center;gap:6px;border:none;background:#fff;border-radius:999px;padding:13px 22px;font-size:15px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.12);cursor:pointer;font-family:inherit;color:var(--text)}
   .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:rgba(20,20,20,.88);color:#fff;font-size:14px;padding:10px 16px;border-radius:999px;z-index:70;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
   .toast.on{opacity:1}
   /* 확대 뷰어 */
@@ -221,8 +221,8 @@
     <h1 id="title"></h1>
     <button class="nav view-only" id="next">›</button>
     <button class="pill view-only" id="today">오늘</button>
-    <button class="icon view-only" id="deco" aria-label="꾸미기"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M4 18.5l5.5-5.5 3.5 3.5 2.5-2.5 4.5 4.5"/></svg></button>
-    <button class="icon view-only" id="gear" aria-label="설정"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    <button class="icon view-only" id="deco" aria-label="꾸미기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M4 18.5l5.5-5.5 3.5 3.5 2.5-2.5 4.5 4.5"/></svg></button>
+    <button class="icon view-only" id="gear" aria-label="설정"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     <button class="pill blue edit-only" id="done">완료</button>
   </div>
   <div class="summary" id="summary" role="button" tabindex="0">
@@ -238,7 +238,7 @@
   </div>
 </div>
 
-<div class="editbar"><button id="addPhotoEdit">🖼️ 사진</button></div>
+<div class="editbar"><button id="addPhotoEdit"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M4 18.5l5.5-5.5 3.5 3.5 2.5-2.5 4.5 4.5"/></svg> 사진</button></div>
 <div class="toast" id="toast"></div>
 
 <div class="login" id="login">
@@ -313,7 +313,7 @@ function render(){
       if(isZero(d)) chips=`<div class="chip zero">0원</div>`;
       else{
         const list=d.entries.filter(x=>x.a>0);
-        list.slice(0,3).forEach(x=>chips+=`<div class="chip" style="background:${CATS[x.c]};color:${FG[x.c]}">${x.a}원${x.m?'-'+x.m:''}</div>`);
+        list.slice(0,3).forEach(x=>chips+=`<div class="chip" style="background:${CATS[x.c]};color:${FG[x.c]}">${x.a}원</div>`);   // 달력 칸에는 금액만 (메모는 날짜를 누르면 보임)
         if(list.length>3) chips+=`<div class="more">+${list.length-3}</div>`;
       }
     }
@@ -526,7 +526,9 @@ function drawSheet(){
   const amt=body.querySelector('#amt');
   amt.addEventListener('input',()=>{const v=amt.value.replace(/[^0-9]/g,'');amt.value=v?(+v).toLocaleString('ko-KR'):'';});
   body.querySelector('#addp').onclick=()=>{ addTarget=k; $('file').click(); };
-  body.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{selCat=b.dataset.cat;drawSheet();});
+  // 카테고리만 바꿀 때는 화면을 다시 그리지 않음 → 적어둔 금액·메모가 그대로 남음
+  body.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{ selCat=b.dataset.cat;
+    body.querySelectorAll('[data-cat]').forEach(o=>{ const on=o.dataset.cat===selCat; o.classList.toggle('on',on); o.style.background=on?CATS[o.dataset.cat]:''; }); });
   body.querySelectorAll('[data-delp]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();const p=photos.find(x=>x.id==b.dataset.delp);photos=photos.filter(x=>x!==p);drawSheet();render();remote.delPhoto(p);});
   body.querySelectorAll('[data-dele]').forEach(b=>b.onclick=()=>{const [x]=ensure(k).entries.splice(+b.dataset.dele,1);clean(k);drawSheet();render();remote.delEntry(x);});
   body.querySelector('#add').onclick=()=>{
