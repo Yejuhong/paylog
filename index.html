@@ -274,53 +274,15 @@ const $=id=>document.getElementById(id);
 let cur={y:TODAY.getFullYear(),m:TODAY.getMonth()};
 let selCat='식비', openKey=null, editing=false, selId=null;
 
-/* ---------- 샘플 사진 ---------- */
-function fakePhoto(emoji,c1,c2,w=600,h=600){
-  const cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');
-  const g=x.createLinearGradient(0,0,w,h);g.addColorStop(0,c1);g.addColorStop(1,c2);x.fillStyle=g;x.fillRect(0,0,w,h);
-  x.fillStyle='rgba(255,255,255,.85)';x.beginPath();x.ellipse(w/2,h/2+20,w*.36,h*.3,0,0,Math.PI*2);x.fill();
-  x.font=`${Math.min(w,h)*.38}px serif`;x.textAlign='center';x.textBaseline='middle';x.fillText(emoji,w/2,h/2+10);
-  return {src:cv.toDataURL('image/jpeg',.85),ar:w/h};
-}
-const P={soup:fakePhoto('🍲','#5b3a29','#a0643c'),kimbap:fakePhoto('🍙','#2e4a3b','#7aa07f'),
-  tteok:fakePhoto('🍢','#7a1f1f','#e0603a',600,800),squid:fakePhoto('🦑','#2d5d8a','#c9d6e3',800,600),
-  crepe:fakePhoto('🥞','#c79a5e','#f3dfb8'),burger:fakePhoto('🍔','#3b3b3b','#9a8f80'),
-  ramen:fakePhoto('🍜','#8a4b14','#e6b56b'),coffee:fakePhoto('☕','#4a3426','#c8a27f')};
 
 /* ---------- 데이터 ----------
    entries: 날짜별 지출 / photos: 사진마다 '어느 날짜 칸 기준으로 어디에, 얼마나 크게, 몇 도' 있는지 저장 */
 const e=(a,m,c)=>({a,m,c});
-const days={
-  '2026-08-03':{entries:[e(42000,'고기','식비'),e(12000,'택시','교통')]},
-  '2026-08-15':{entries:[e(89000,'여름옷','쇼핑'),e(6500,'라떼','카페')]},
-  '2026-08-27':{entries:[e(15000,'치킨','식비')]},
-  '2026-09-05':{entries:[e(32000,'초밥','식비'),e(4800,'커피','카페')]},
-  '2026-09-18':{entries:[e(55000,'신발','쇼핑'),e(2800,'버스','교통')]},
-  '2026-09-29':{entries:[e(21000,'파스타','식비'),e(9000,'선물','기타')]},
-  '2026-10-19':{entries:[e(0,'','기타')]},
-  '2026-10-20':{entries:[e(2690,'커피','카페'),e(9200,'샌드위치','식비')]},
-  '2026-10-21':{entries:[e(21600,'마트','쇼핑')]},
-  '2026-10-22':{entries:[e(11000,'김밥','식비')]},
-  '2026-10-23':{entries:[e(38000,'국밥','식비'),e(151600,'운동화','쇼핑')]},
-  '2026-10-24':{entries:[e(0,'','기타')]},
-  '2026-11-01':{entries:[e(6000,'크레페','카페')]},
-  '2026-11-02':{entries:[e(0,'','기타')]},
-  '2026-11-03':{entries:[e(12000,'국밥','식비'),e(1400,'버스','교통')]},
-  '2026-11-04':{entries:[e(0,'','기타')]},
-  '2026-11-05':{entries:[e(8500,'김밥','식비'),e(4500,'커피','카페')]},
-  '2026-11-06':{entries:[e(23500,'떡볶이','식비'),e(27900,'니트','쇼핑'),e(10200,'라멘','식비'),e(3000,'아이스크림','카페')]},
-  '2026-11-07':{entries:[e(18000,'오징어순대','식비'),e(3500,'막걸리','식비')]},
-};
+const days={};   // 날짜별 지출 기록 (처음엔 비어 있음)
 let uid=1;
 const fitW=(ar,box=.62)=>ar>=1?box:box*ar;           // 기본 크기: 칸 너비의 62% 상자 안에 맞춤
 const mk=(key,ph,o={})=>({id:uid++,key,src:ph.src,ar:ph.ar,ox:.5,oy:null,w:fitW(ph.ar),rot:0,...o});
-let photos=[
-  mk('2026-10-20',P.burger), mk('2026-10-22',P.kimbap), mk('2026-10-23',P.soup),
-  mk('2026-11-01',P.crepe), mk('2026-11-03',P.soup), mk('2026-11-05',P.kimbap),
-  mk('2026-11-05',P.coffee,{ox:.84,oy:1.95,w:.38,rot:10}),
-  mk('2026-11-06',P.tteok), mk('2026-11-06',P.ramen,{ox:.84,oy:2,w:.38,rot:-8}),
-  mk('2026-11-07',P.squid,{w:.9,rot:-4}),
-];
+let photos=[];   // 달력에 붙인 사진들 (처음엔 비어 있음)
 const won=n=>n.toLocaleString('ko-KR')+'원';
 const dayTotal=d=>d.entries.reduce((s,x)=>s+x.a,0);
 const isZero=d=>d && d.entries.length>0 && dayTotal(d)===0;
