@@ -522,7 +522,7 @@ function drawSheet(){
     <div class="form"><input class="amt" id="amt" inputmode="numeric" placeholder="금액"><input id="memo" placeholder="메모 (예: 국밥)"></div>
     <div class="cats">${Object.keys(CATS).map(c=>`<button class="cat ${c===selCat?'on':''}" data-cat="${c}" style="${c===selCat?'background:'+CATS[c]+';color:'+FG[c]:''}">${c}</button>`).join('')}</div>
     <div class="btns"><button class="btn zero" id="zbtn">⭐ 무지출</button><button class="btn main" id="add">추가</button></div>
-    <div class="tip">0원만 기록된 날은 날짜 자리에 자동으로 ⭐이 떠요. 사진 위치는 😊 꾸미기에서 자유롭게 옮길 수 있어요.</div>`;
+    <div class="tip">0원만 기록된 날은 날짜 자리에 자동으로 ⭐이 떠요.</div>`;
   const amt=body.querySelector('#amt');
   amt.addEventListener('input',()=>{const v=amt.value.replace(/[^0-9]/g,'');amt.value=v?(+v).toLocaleString('ko-KR'):'';});
   body.querySelector('#addp').onclick=()=>{ addTarget=k; $('file').click(); };
@@ -532,9 +532,9 @@ function drawSheet(){
   body.querySelector('#add').onclick=()=>{
     if(!amt.value){amt.focus();return;}
     const x=e(+amt.value.replace(/[^0-9]/g,''),body.querySelector('#memo').value.trim(),selCat);
-    ensure(k).entries.push(x); drawSheet(); render(); remote.addEntry(k,x);
+    ensure(k).entries.push(x); closeSheet(); render(); remote.addEntry(k,x);   // 추가하면 창이 내려감
   };
-  body.querySelector('#zbtn').onclick=async()=>{ const x=ensure(k); x.entries=x.entries.filter(v=>v.a!==0); const z=e(0,'','기타'); x.entries.push(z); drawSheet(); render();
+  body.querySelector('#zbtn').onclick=async()=>{ const x=ensure(k); x.entries=x.entries.filter(v=>v.a!==0); const z=e(0,'','기타'); x.entries.push(z); closeSheet(); render();
     await remote.delZero(k); remote.addEntry(k,z); };
 }
 
